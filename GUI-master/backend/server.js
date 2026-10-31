@@ -66,6 +66,7 @@ const validUplinkCommands = new Set([
   'TX_OFF',
   'STATUS',
   'RESET',
+  'RW',
 ]);
 
 let port = null;
@@ -169,7 +170,7 @@ function handleSerialData(data) {
   }
 
   const ackMatch = line.match(
-    /^ACK,046,(BOOT|HC|CALC|TX_ON|TX_OFF|STATUS|RESET),(OK|ACCEPTED|REJECTED)$/,
+    /^ACK,046,(BOOT|HC|CALC|TX_ON|TX_OFF|STATUS|RESET|RW),(OK|ACCEPTED|REJECTED)$/,
   );
   if (ackMatch) {
     const [, command, status] = ackMatch;

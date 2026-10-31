@@ -9,6 +9,7 @@ const VALID_COMMANDS = [
   'TX_OFF',
   'STATUS',
   'RESET',
+  'RW',
 ]
 
 function UplinkControl() {
@@ -28,7 +29,7 @@ function UplinkControl() {
     const timeout = setTimeout(() => {
       setTimedOut(true)
       resetUplinkStatus('error')
-    }, 3000)
+    }, 8000)
 
     return () => clearTimeout(timeout)
   }, [uplinkStatus, resetUplinkStatus])
