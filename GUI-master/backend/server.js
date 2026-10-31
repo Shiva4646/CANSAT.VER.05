@@ -14,12 +14,45 @@ if (!fs.existsSync(logsDirectory)) {
   fs.mkdirSync(logsDirectory, { recursive: true });
 }
 
+const flightLogColumns = [
+  'esp_ms',
+  'packet_length',
+  'team_id',
+  'time_s',
+  'packet_count',
+  'altitude_m',
+  'pressure_pa',
+  'temp_c',
+  'volt_v',
+  'gnss_time',
+  'latitude',
+  'longitude',
+  'gnss_alt_m',
+  'sats',
+  'ax',
+  'ay',
+  'az',
+  'roll',
+  'pitch',
+  'spin_rate',
+  'flight_state',
+  'mx',
+  'my',
+  'mz',
+  'rssi_dbm',
+  'snr_db',
+];
 const flightLogFilename = path.join(logsDirectory, `flight_log_${Date.now()}.csv`);
 const flightLogStream = fs.createWriteStream(flightLogFilename, { flags: 'a' });
-flightLogStream.write('team_id,timestamp,packet_count,altitude,pressure,temperature,voltage,gnss_time,latitude,longitude,gnss_altitude,acceleration,gyroscope,magnetometer,flight_state\n');
+flightLogStream.write(`${flightLogColumns.join(',')}\r\n`);
 flightLogStream.on('error', (error) => {
   console.error('Telemetry log stream error:', error.message);
 });
+
+function escapeCsvValue(value) {
+  const text = String(value ?? '');
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
 
 const frontendDir = path.join(__dirname, '..', 'frontend');
 
@@ -68,6 +101,16 @@ const validUplinkCommands = new Set([
   'RESET',
   'RW',
 ]);
+const flightStateNames = [
+  'BOOT',
+  'TEST',
+  'LAUNCH_PAD',
+  'ASCENT',
+  'DEPLOY',
+  'DESCENT',
+  'AEROBREAK_RELEASE',
+  'IMPACT',
+];
 
 let port = null;
 let parser = null;
@@ -183,6 +226,120 @@ function handleSerialData(data) {
     return;
   }
 
+  const rxMatch = line.match(/(?:^|\s)RX,/);
+  if (rxMatch) {
+    const rxStart = line.indexOf('RX,', rxMatch.index);
+    const values = line.slice(rxStart).split(',').map((value) => value.trim());
+    if (values.length !== 21 || values[3] !== '046') {
+      console.warn('Ignoring malformed RX telemetry packet:', line);
+      return;
+    }
+
+    const stateNumber = Number(values[17]);
+    const acceleration = values[15].split(';').map(Number);
+    const magnetometer = values[18].split(';').map(Number);
+    const spinRate = Number(values[16]);
+    const rssi = Number(values[19]);
+    const snr = Number(values[20]);
+    const missionTimeSeconds = Number(values[4]);
+    const packetCountValue = Number(values[5]);
+    const altitude = Number(values[6]);
+    const pressure = Number(values[7]);
+    const temperature = Number(values[8]);
+    const voltage = Number(values[9]);
+    const gnssTime = values[10];
+    const latitude = Number(values[11]);
+    const longitude = Number(values[12]);
+    const gnssAltitude = Number(values[13]);
+    const gnssSats = Number(values[14]);
+
+    if (
+      !Number.isInteger(stateNumber) ||
+      stateNumber < 0 ||
+      stateNumber >= flightStateNames.length ||
+      !Number.isFinite(Number(values[1])) ||
+      !Number.isFinite(Number(values[2])) ||
+      !Number.isInteger(packetCountValue) ||
+      !Number.isInteger(gnssSats) ||
+      acceleration.length !== 5 ||
+      magnetometer.length !== 3 ||
+      ![
+        ...acceleration,
+        ...magnetometer,
+        spinRate,
+        rssi,
+        snr,
+        missionTimeSeconds,
+        altitude,
+        pressure,
+        temperature,
+        voltage,
+        latitude,
+        longitude,
+        gnssAltitude,
+      ].every(Number.isFinite)
+    ) {
+      console.warn('Ignoring invalid RX telemetry values:', line);
+      return;
+    }
+
+    const [accel_x, accel_y, accel_z, roll, pitch] = acceleration;
+    const [mag_x, mag_y, mag_z] = magnetometer;
+    const timestampMs = Number(values[1]);
+    const parsedTelemetry = {
+      team_id: values[3],
+      mission_time: missionTimeSeconds,
+      packet_count: packetCountValue,
+      altitude,
+      pressure,
+      temperature,
+      voltage,
+      gnss_time: gnssTime,
+      latitude,
+      longitude,
+      gnss_altitude: gnssAltitude,
+      gnss_sats: gnssSats,
+      timestamp: missionTimeSeconds,
+      packet_timestamp_ms: timestampMs,
+      packet_length: Number(values[2]),
+      acceleration,
+      accel_x,
+      accel_y,
+      accel_z,
+      roll,
+      pitch,
+      spin_rate: spinRate,
+      gyro_spin_rate: spinRate,
+      flight_state: flightStateNames[stateNumber],
+      flight_state_id: stateNumber,
+      magnetometer,
+      mag_x,
+      mag_y,
+      mag_z,
+      rssi,
+      signal: rssi,
+      snr,
+    };
+
+    console.log('Parsed RX telemetry:', parsedTelemetry);
+    const csvRow = [
+      values[1],
+      values[2],
+      values[3],
+      ...values.slice(4, 15),
+      ...acceleration,
+      values[16],
+      values[17],
+      ...magnetometer,
+      values[19],
+      values[20],
+    ];
+    flightLogStream.write(`${csvRow.map(escapeCsvValue).join(',')}\r\n`);
+    io.emit('new_data', parsedTelemetry);
+    io.emit('raw_data', line);
+    return;
+  }
+
   const commandResponsePrefixes = [
     'BOOT,',
     'HC,',
@@ -202,7 +359,6 @@ function handleSerialData(data) {
   }
 
   if (line.startsWith('#')) {
-    flightLogStream.write(line + ',,,,,,,,,,,,,,\n');
     return;
   }
 
@@ -214,8 +370,6 @@ function handleSerialData(data) {
     const rawData = line.trim();
     console.log('Raw data received:', rawData);
 
-    flightLogStream.write(line + '\n');
-    
     // Support multiple known CSV orders. Primary (piFieldsA) is the expected
     // order; fallback (piFieldsB) covers older simulator format (temperature-first).
     const piFieldsA = [
