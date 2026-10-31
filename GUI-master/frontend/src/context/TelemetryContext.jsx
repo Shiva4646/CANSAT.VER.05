@@ -16,8 +16,6 @@ const initialTelemetryState = {
   teamId: '2024ASI-052',
   rssi: -50,
   motionState: 'TUMBLING',
-  power: 0,
-  batteryCurrent: 0,
   batteryVoltage: 0,
   gasResistance: 0,
   humidity: 0,
@@ -72,7 +70,6 @@ const updateTelemetryState = (previous, data) => {
   const pressure = toNumber(data.pressure, previous.telemetry.pressure)
   const temperature = toNumber(firstDefined(data.temperature, data.temp), previous.telemetry.temperature)
   const voltage = toNumber(firstDefined(data.battery_voltage, data.voltage), previous.batteryVoltage)
-  const current = toNumber(firstDefined(data.battery_current, data.current), previous.batteryCurrent)
   const latitude = toNumber(firstDefined(data.latitude, data.lat, data.gnss_lat), previous.gnssLat)
   const longitude = toNumber(firstDefined(data.longitude, data.lon, data.gnss_lon), previous.gnssLon)
   const gnssAlt = toNumber(firstDefined(data.gnss_altitude, data.gnssAlt, altitude), previous.gnssAlt)
@@ -86,11 +83,6 @@ const updateTelemetryState = (previous, data) => {
     teamId: data.team_id ?? data.teamId ?? previous.teamId,
     rssi: toNumber(firstDefined(data.rssi, data.signal), previous.rssi),
     motionState: data.motion_state ?? data.motionState ?? previous.motionState,
-    power: toNumber(
-      firstDefined(data.power, voltage * current / 1000),
-      previous.power,
-    ),
-    batteryCurrent: current,
     batteryVoltage: voltage,
     gasResistance: toNumber(
       firstDefined(data.gas_resistance, data.gasResistance),

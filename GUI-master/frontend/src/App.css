@@ -807,15 +807,17 @@ button {
 
 .power-stat-stack {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   height: calc(100% - 22px);
 }
 
 .dashboard-power-panel .telemetry-tile {
+  align-items: center;
   border: 0;
   background: transparent;
   box-shadow: none;
+  text-align: center;
 }
 
 /* ========================================================================
@@ -2319,9 +2321,9 @@ body {
 
 .power-stat-stack {
   height: calc(100% - 28px);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
-  align-items: center;
+  align-items: stretch;
 }
 
 .dashboard-power-panel .telemetry-tile,
