@@ -2436,7 +2436,7 @@ body {
 
 .sensors-grid {
   flex: 1;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(230px, 1fr));
   gap: 12px;
 }
@@ -3056,8 +3056,22 @@ a:focus-visible,
   grid-row: 2;
 }
 
-.reference-dashboard .dashboard-power-panel .power-stat-stack {
-  height: calc(100% - 22px);
+.reference-dashboard .dashboard-power-panel .dashboard-chart-card {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.reference-dashboard .dashboard-power-panel .dashboard-chart-card .realtime-chart {
+  flex: 1 1 0%;
+  min-height: 0;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.reference-dashboard .dashboard-power-panel .dashboard-chart-readout {
+  flex: 0 0 22px;
+  padding-right: 16px;
 }
 
 .reference-dashboard .dashboard-gnss-panel {

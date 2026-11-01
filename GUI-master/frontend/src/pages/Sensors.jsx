@@ -20,14 +20,6 @@ const sensorCards = [
     digits: 2,
   },
   {
-    label: 'Humidity',
-    metric: 'humidity',
-    color: '#34D399',
-    unit: '%',
-    valueKey: 'humidity',
-    digits: 2,
-  },
-  {
     label: 'Altitude',
     metric: 'altitude',
     color: '#7c3aed',
@@ -36,32 +28,22 @@ const sensorCards = [
     digits: 2,
   },
   {
-    label: 'Battery Voltage',
+    label: 'Voltage',
     metric: 'voltage',
-    color: '#9f7aea',
+    color: '#A78BFA',
     unit: 'V',
     valueKey: 'voltage',
-    digits: 2,
-  },
-  {
-    label: 'Gas Resistance',
-    metric: 'gasResistance',
-    color: '#c4b5fd',
-    unit: 'Ω',
-    valueKey: 'gasResistance',
     digits: 2,
   },
 ]
 
 function Sensors() {
-  const { telemetry, humidity, gasResistance } = useTelemetry()
+  const { telemetry } = useTelemetry()
   const values = {
     temperature: telemetry.temperature,
     pressure: telemetry.pressure,
-    humidity,
     altitude: telemetry.altitude,
     voltage: telemetry.voltage,
-    gasResistance,
   }
 
   return (

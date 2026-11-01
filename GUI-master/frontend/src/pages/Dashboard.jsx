@@ -8,7 +8,7 @@ import {
   PointElement,
   Tooltip,
 } from 'chart.js'
-import { BatteryCharging, MapPin, Radio } from 'lucide-react'
+import { MapPin, Radio } from 'lucide-react'
 import { Line } from 'react-chartjs-2'
 import GPSMap from '../components/GPSMap'
 import RealtimeChart from '../components/RealtimeChart'
@@ -216,13 +216,29 @@ function Dashboard() {
         </section>
 
         <section className="dashboard-panel dashboard-power-panel">
-          <h3>Power Subsystem</h3>
-          <div className="power-stat-stack">
-            <Metric
-              icon={BatteryCharging}
+          <div className="dashboard-chart-card">
+            <div className="dashboard-chart-header pl-3">
+              <h3>VOLTAGE</h3>
+              <span>{formatNumber(telemetry.batteryVoltage)} V</span>
+            </div>
+            <RealtimeChart
+              chartOptions={{
+                maintainAspectRatio: false,
+                layout: { padding: { right: 16 } },
+                scales: {
+                  x: { ticks: { maxTicksLimit: 5, maxRotation: 0, minRotation: 0 } },
+                  y: { beginAtZero: false, grace: '10%' },
+                },
+              }}
+              color="#A78BFA"
+              height="100%"
               label="Voltage"
-              value={`${formatNumber(telemetry.batteryVoltage)} V`}
+              metric="voltage"
+              unit="V"
             />
+            <div className="dashboard-chart-readout">
+              {formatNumber(telemetry.batteryVoltage)} V
+            </div>
           </div>
         </section>
 
